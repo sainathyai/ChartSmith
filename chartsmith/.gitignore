@@ -1,0 +1,8 @@
+.DS_Store
+bin
+.aider*
+test-results/
+.envrc
+.env
+.env.local
+.specstory/

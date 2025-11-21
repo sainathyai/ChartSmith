@@ -1,0 +1,20 @@
+database: chartsmith
+name: bootstrap_workspace
+schema:
+  postgres:
+    primaryKey:
+    - id
+    columns:
+    - name: id
+      type: text
+      constraints:
+        notNull: true
+    - name: name
+      type: text
+      constraints:
+        notNull: true
+    - name: current_revision
+      type: integer
+      constraints:
+        notNull: true
+      default: "0"

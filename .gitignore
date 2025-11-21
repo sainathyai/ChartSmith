@@ -1,0 +1,30 @@
+# Build artifacts
+.next/
+node_modules/
+dist/
+build/
+*.log
+
+# Cache directories
+.cache/
+*.cache
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test results
+test-results/
+coverage/
+

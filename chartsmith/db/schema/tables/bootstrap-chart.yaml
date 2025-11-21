@@ -1,0 +1,17 @@
+database: chartsmith
+name: bootstrap_chart
+schema:
+  postgres:
+    columns:
+    - name: id
+      type: text
+      constraints:
+        notNull: true
+    - name: workspace_id
+      type: text
+      constraints:
+        notNull: true
+    - name: name
+      type: text
+      constraints:
+        notNull: true

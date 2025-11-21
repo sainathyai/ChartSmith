@@ -1,0 +1,69 @@
+database: chartsmith
+name: workspace_chat
+schema:
+  postgres:
+    primaryKey:
+    - id
+    columns:
+    - name: id
+      type: text
+      constraints:
+        notNull: true
+    - name: workspace_id
+      type: text
+      constraints:
+        notNull: true
+    - name: revision_number
+      type: integer
+      constraints:
+        notNull: true
+    - name: created_at
+      type: timestamp
+      constraints:
+        notNull: true
+    - name: sent_by
+      type: text
+      constraints:
+        notNull: true
+    - name: prompt
+      type: text
+      constraints:
+        notNull: true
+    - name: response
+      type: text
+    - name: response_plan_id
+      type: text
+    - name: response_render_id
+      type: text
+    - name: response_conversion_id
+      type: text
+    - name: is_intent_complete
+      type: boolean
+      constraints:
+        notNull: true
+      default: "false"
+    - name: is_intent_conversational
+      type: boolean
+    - name: is_intent_plan
+      type: boolean
+    - name: is_intent_off_topic
+      type: boolean
+    - name: is_intent_chart_developer
+      type: boolean
+    - name: is_intent_chart_operator
+      type: boolean
+    - name: is_intent_proceed
+      type: boolean
+    - name: is_intent_render
+      type: boolean
+    - name: is_canceled
+      type: boolean
+      constraints:
+        notNull: true
+      default: "false"
+    - name: followup_actions
+      type: jsonb
+    - name: response_rollback_to_revision_number
+      type: integer
+    - name: message_from_persona
+      type: text

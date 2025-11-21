@@ -1,0 +1,36 @@
+database: chartsmith
+name: workspace_file
+requires:
+  - pgvector
+schema:
+  postgres:
+    primaryKey:
+    - id
+    - revision_number
+    columns:
+    - name: id
+      type: text
+      constraints:
+        notNull: true
+    - name: revision_number
+      type: integer
+      constraints:
+        notNull: false
+    - name: chart_id
+      type: text
+    - name: workspace_id
+      type: text
+      constraints:
+        notNull: true
+    - name: file_path
+      type: text
+      constraints:
+        notNull: true
+    - name: content
+      type: text
+      constraints:
+        notNull: true
+    - name: content_pending
+      type: text
+    - name: embeddings
+      type: vector (1024)

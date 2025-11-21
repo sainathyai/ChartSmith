@@ -1,0 +1,43 @@
+database: chartsmith
+name: chartsmith_user
+schema:
+  postgres:
+    indexes:
+    - name: user_email_idx
+      columns:
+      - email
+      isUnique: true
+    primaryKey:
+    - id
+    columns:
+    - name: id
+      type: text
+      constraints:
+        notNull: true
+    - name: email
+      type: text
+      constraints:
+        notNull: true
+    - name: name
+      type: text
+      constraints:
+        notNull: true
+    - name: image_url
+      type: text
+      constraints:
+        notNull: true
+    - name: created_at
+      type: timestamp
+      constraints:
+        notNull: true
+    - name: last_login_at
+      type: timestamp
+    - name: last_active_at
+      type: timestamp
+    - name: replicated_token
+      type: text
+    - name: is_admin
+      type: boolean
+      constraints:
+        notNull: true
+      default: "false"

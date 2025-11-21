@@ -1,0 +1,17 @@
+database: chartsmith
+name: content_cache
+requires:
+  - pgvector
+schema:
+  postgres:
+    primaryKey:
+    - content_sha256
+    columns:
+    - name: content_sha256
+      type: text
+      constraints:
+        notNull: true
+    - name: embeddings
+      type: vector (1024)
+      constraints:
+        notNull: true

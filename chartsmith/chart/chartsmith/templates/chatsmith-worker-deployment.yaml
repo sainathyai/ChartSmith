@@ -1,0 +1,133 @@
+{{- $region := .Values.worker.aws.region }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "chartsmith.fullname" . }}-worker
+  labels:
+    {{- include "chartsmith.labels" (dict "Chart" .Chart "Values" (merge .Values (dict "component" "worker")) "Release" .Release "Files" .Files) | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "chartsmith.selectorLabels" (dict "Chart" .Chart "Values" (merge .Values (dict "component" "worker")) "Release" .Release "Files" .Files) | nindent 6 }}
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        {{- include "chartsmith.selectorLabels" (dict "Chart" .Chart "Values" (merge .Values (dict "component" "worker")) "Release" .Release "Files" .Files) | nindent 8 }}
+        {{- include "chartsmith.labels" (dict "Chart" .Chart "Values" (merge .Values (dict "component" "worker")) "Release" .Release "Files" .Files) | nindent 8 }}
+        app.kubernetes.io/component: worker
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- if and .Values.global .Values.global.replicated .Values.global.replicated.dockerconfigjson }}
+      imagePullSecrets:
+        - name: chartsmith-image-pull-secret
+      {{- else if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "chartsmith.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.worker.bootstrap.enabled }}
+      initContainers:
+        - securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          args:
+          - bootstrap
+          - --workspace-dir={{ .Values.worker.bootstrap.workspaceDir | default "/bootstrap/default-workspace" }}
+          command:
+          - /chartsmith-worker
+          env:
+            # TODO remove conditional when this PR is merged https://github.com/replicatedhq/chartsmith/pull/111
+            {{- if .Values.worker.aws.useEC2Parameters }}
+            - name: USE_EC2_PARAMETERS
+              value: {{ .Values.worker.aws.useEC2Parameters | quote }}
+            {{- end }}
+            {{- if $region }}
+            - name: AWS_REGION
+              value: {{ $region }}
+            {{- end }}
+            - name: CHARTSMITH_PG_URI
+              {{- include "chartsmith.pgUri" . | trim | nindent 14 }}
+            - name: VOYAGE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "chartsmith.voyageApiKey" . }}
+                  key: VOYAGE_API_KEY
+          image: "{{ .Values.images.worker.registry }}/{{ .Values.images.worker.repository }}:{{ .Values.images.worker.tag | default .Chart.AppVersion }}"
+          name: bootstrap
+      {{- end }}
+      containers:
+        - name: worker
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.images.worker.registry }}/{{ .Values.images.worker.repository }}:{{ .Values.images.worker.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.images.worker.pullPolicy }}
+          args: ["run"]
+          env:
+            {{- if .Values.worker.aws.useEC2Parameters }}
+            - name: USE_EC2_PARAMETERS
+              value: {{ .Values.worker.aws.useEC2Parameters | quote }}
+            {{- end }}
+            {{- if $region }}
+            - name: AWS_REGION
+              value: {{ $region }}
+            {{- end }}
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "chartsmith.anthropicApiKey" . }}
+                  key: ANTHROPIC_API_KEY
+            - name: GROQ_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "chartsmith.groqApiKey" . }}
+                  key: GROQ_API_KEY
+            - name: VOYAGE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "chartsmith.voyageApiKey" . }}
+                  key: VOYAGE_API_KEY
+            - name: CHARTSMITH_PG_URI
+              {{- include "chartsmith.pgUri" . | trim | nindent 14 }}
+            - name: CHARTSMITH_CENTRIFUGO_ADDRESS
+              value: http://{{ include "chartsmith.fullname" . }}-centrifugo:8000/api
+            - name: CHARTSMITH_CENTRIFUGO_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "chartsmith.centrifugoApiKey" . }}
+                  key: CHARTSMITH_CENTRIFUGO_API_KEY
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- with .Values.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

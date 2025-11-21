@@ -1,0 +1,38 @@
+database: chartsmith
+name: waitlist
+schema:
+  postgres:
+    indexes:
+    - name: waitlist_email_idx
+      columns:
+      - email
+      isUnique: true
+    primaryKey:
+    - id
+    columns:
+    - name: id
+      type: text
+      constraints:
+        notNull: true
+    - name: email
+      type: text
+      constraints:
+        notNull: true
+    - name: name
+      type: text
+      constraints:
+        notNull: true
+    - name: image_url
+      type: text
+      constraints:
+        notNull: true
+    - name: created_at
+      type: timestamp
+      constraints:
+        notNull: true
+    - name: last_login_at
+      type: timestamp
+    - name: last_active_at
+      type: timestamp
+    - name: replicated_token
+      type: text

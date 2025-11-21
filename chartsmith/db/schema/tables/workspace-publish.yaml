@@ -1,0 +1,40 @@
+database: chartsmith
+name: workspace_publish
+schema:
+  postgres:
+    primaryKey:
+    - workspace_id
+    - revision_number
+    - chart_name
+    - chart_version
+    columns:
+    - name: workspace_id
+      type: text
+      constraints:
+        notNull: true
+    - name: revision_number
+      type: integer
+      constraints:
+        notNull: true
+    - name: chart_name
+      type: text
+      constraints:
+        notNull: true
+    - name: chart_version
+      type: text
+      constraints:
+        notNull: true
+    - name: status
+      type: text
+      constraints:
+        notNull: true
+    - name: processing_started_at
+      type: timestamp
+    - name: completed_at
+      type: timestamp
+    - name: error_message
+      type: text
+    - name: created_at
+      type: timestamp
+      constraints:
+        notNull: true

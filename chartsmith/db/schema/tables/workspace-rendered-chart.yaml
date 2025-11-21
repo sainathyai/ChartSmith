@@ -1,0 +1,41 @@
+database: chartsmith
+name: workspace_rendered_chart
+schema:
+  postgres:
+    primaryKey:
+    - id
+    columns:
+    - name: id
+      type: text
+      constraints:
+        notNull: true
+    - name: workspace_render_id
+      type: text
+      constraints:
+        notNull: true
+    - name: chart_id
+      type: text
+      constraints:
+        notNull: true
+    - name: is_success
+      type: boolean
+      constraints:
+        notNull: true
+    - name: dep_update_command
+      type: text
+    - name: dep_update_stdout
+      type: text
+    - name: dep_update_stderr
+      type: text
+    - name: helm_template_command
+      type: text
+    - name: helm_template_stdout
+      type: text
+    - name: helm_template_stderr
+      type: text
+    - name: created_at
+      type: timestamp
+      constraints:
+        notNull: true
+    - name: completed_at
+      type: timestamp
