@@ -10,16 +10,17 @@ import (
 
 	"github.com/replicatedhq/chartsmith/pkg/logger"
 	"github.com/replicatedhq/chartsmith/pkg/param"
+	"go.uber.org/zap"
 )
 
 const OpenRouterAPIURL = "https://openrouter.ai/api/v1/chat/completions"
 
 // OpenRouterMessage represents a message in OpenRouter API format
 type OpenRouterMessage struct {
-	Role         string                 `json:"role"`
-	Content      interface{}            `json:"content,omitempty"` // Can be string or array
+	Role         string                  `json:"role"`
+	Content      interface{}             `json:"content,omitempty"` // Can be string or array
 	FunctionCall *OpenRouterFunctionCall `json:"function_call,omitempty"`
-	Name         string                 `json:"name,omitempty"` // For function responses
+	Name         string                  `json:"name,omitempty"` // For function responses
 }
 
 // OpenRouterFunctionCall represents a function call in OpenRouter format
@@ -37,20 +38,20 @@ type OpenRouterFunction struct {
 
 // OpenRouterRequest represents the request body for OpenRouter API
 type OpenRouterRequest struct {
-	Model       string              `json:"model"`
-	Messages    []OpenRouterMessage `json:"messages"`
-	Stream      bool                `json:"stream"`
-	MaxTokens   *int                `json:"max_tokens,omitempty"`
-	Functions   []OpenRouterFunction `json:"functions,omitempty"`   // For older models
-	FunctionCall interface{}        `json:"function_call,omitempty"` // "auto", "none", or {"name": "function_name"}
-	Tools       []OpenRouterTool    `json:"tools,omitempty"`         // For newer models (OpenAI format)
-	ToolChoice  interface{}         `json:"tool_choice,omitempty"`   // "auto", "none", or {"type": "function", "function": {"name": "..."}}
+	Model        string               `json:"model"`
+	Messages     []OpenRouterMessage  `json:"messages"`
+	Stream       bool                 `json:"stream"`
+	MaxTokens    *int                 `json:"max_tokens,omitempty"`
+	Functions    []OpenRouterFunction `json:"functions,omitempty"`     // For older models
+	FunctionCall interface{}          `json:"function_call,omitempty"` // "auto", "none", or {"name": "function_name"}
+	Tools        []OpenRouterTool     `json:"tools,omitempty"`         // For newer models (OpenAI format)
+	ToolChoice   interface{}          `json:"tool_choice,omitempty"`   // "auto", "none", or {"type": "function", "function": {"name": "..."}}
 }
 
 // OpenRouterTool represents a tool definition (OpenAI format)
 type OpenRouterTool struct {
-	Type     string              `json:"type"`
-	Function OpenRouterFunction  `json:"function"`
+	Type     string             `json:"type"`
+	Function OpenRouterFunction `json:"function"`
 }
 
 // OpenRouterToolCall represents a tool call in the response
@@ -64,9 +65,9 @@ type OpenRouterToolCall struct {
 type OpenRouterResponse struct {
 	Choices []struct {
 		Message struct {
-			Content   string              `json:"content"`
+			Content   string               `json:"content"`
 			ToolCalls []OpenRouterToolCall `json:"tool_calls,omitempty"` // New format (tools)
-			Role      string              `json:"role"`
+			Role      string               `json:"role"`
 			// Legacy format support
 			FunctionCall *OpenRouterFunctionCall `json:"function_call,omitempty"`
 		} `json:"message"`
@@ -78,7 +79,7 @@ type OpenRouterResponse struct {
 type OpenRouterStreamChunk struct {
 	Choices []struct {
 		Delta struct {
-			Content      string                 `json:"content,omitempty"`
+			Content      string                  `json:"content,omitempty"`
 			FunctionCall *OpenRouterFunctionCall `json:"function_call,omitempty"`
 		} `json:"delta"`
 		FinishReason string `json:"finish_reason,omitempty"`
@@ -87,9 +88,13 @@ type OpenRouterStreamChunk struct {
 
 // newOpenRouterClient creates an HTTP client for OpenRouter API calls
 func newOpenRouterClient() (*http.Client, error) {
-	if param.Get().OpenRouterAPIKey == "" {
+	key := param.Get().OpenRouterAPIKey
+	if key == "" {
 		return nil, fmt.Errorf("OPENROUTER_API_KEY environment variable not set")
 	}
+	logger.Debug("OpenRouter API key detected",
+		zap.Int("key_length", len(key)),
+		zap.String("key_preview", maskAPIKey(key)))
 	return http.DefaultClient, nil
 }
 
@@ -101,9 +106,9 @@ func callOpenRouter(ctx context.Context, model string, messages []OpenRouterMess
 	}
 
 	reqBody := OpenRouterRequest{
-		Model:    model,
-		Messages: messages,
-		Stream:   false,
+		Model:     model,
+		Messages:  messages,
+		Stream:    false,
 		MaxTokens: &maxTokens,
 	}
 
@@ -130,6 +135,12 @@ func callOpenRouter(ctx context.Context, model string, messages []OpenRouterMess
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
+		if resp.StatusCode == http.StatusUnauthorized {
+			logger.Error(fmt.Errorf("OpenRouter authentication failed"),
+				zap.Int("status_code", resp.StatusCode),
+				zap.String("body", string(body)),
+				zap.String("key_preview", maskAPIKey(param.Get().OpenRouterAPIKey)))
+		}
 		return "", fmt.Errorf("OpenRouter API error: %d - %s", resp.StatusCode, string(body))
 	}
 
@@ -153,9 +164,9 @@ func streamOpenRouter(ctx context.Context, model string, messages []OpenRouterMe
 	}
 
 	reqBody := OpenRouterRequest{
-		Model:    model,
-		Messages: messages,
-		Stream:   true,
+		Model:     model,
+		Messages:  messages,
+		Stream:    true,
 		MaxTokens: &maxTokens,
 	}
 
@@ -182,6 +193,12 @@ func streamOpenRouter(ctx context.Context, model string, messages []OpenRouterMe
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
+		if resp.StatusCode == http.StatusUnauthorized {
+			logger.Error(fmt.Errorf("OpenRouter authentication failed"),
+				zap.Int("status_code", resp.StatusCode),
+				zap.String("body", string(body)),
+				zap.String("key_preview", maskAPIKey(param.Get().OpenRouterAPIKey)))
+		}
 		return fmt.Errorf("OpenRouter API error: %d - %s", resp.StatusCode, string(body))
 	}
 
@@ -221,6 +238,16 @@ func contains(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+func maskAPIKey(key string) string {
+	if key == "" {
+		return "<empty>"
+	}
+	if len(key) <= 8 {
+		return "***"
+	}
+	return fmt.Sprintf("%s...%s", key[:4], key[len(key)-4:])
 }
 
 // callOpenRouterWithFunctions makes a non-streaming call to OpenRouter API with function calling support
@@ -273,6 +300,10 @@ func callOpenRouterWithFunctions(ctx context.Context, model string, messages []O
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		if resp.StatusCode == 401 {
+			logger.Error(fmt.Errorf("OpenRouter authentication failed"),
+				zap.Int("status_code", resp.StatusCode),
+				zap.String("body", string(body)),
+				zap.String("key_preview", maskAPIKey(param.Get().OpenRouterAPIKey)))
 			return nil, fmt.Errorf("OpenRouter API authentication failed (401): %s. Please verify your OPENROUTER_API_KEY is set correctly in your .env file and has valid credits", string(body))
 		}
 		return nil, fmt.Errorf("OpenRouter API error: %d - %s", resp.StatusCode, string(body))
@@ -289,4 +320,3 @@ func callOpenRouterWithFunctions(ctx context.Context, model string, messages []O
 
 	return &openRouterResp, nil
 }
-

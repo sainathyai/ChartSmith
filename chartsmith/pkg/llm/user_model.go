@@ -9,8 +9,10 @@ import (
 	"github.com/replicatedhq/chartsmith/pkg/persistence"
 )
 
-const DefaultModel = "claude-sonnet-4-5-20250929"
-const DefaultOpenRouterModel = "anthropic/claude-sonnet-4.5"
+const (
+	DefaultOpenRouterModel = "anthropic/claude-sonnet-4.5"
+	DefaultModel           = DefaultOpenRouterModel
+)
 
 // GetUserModelPreference gets the user's model preference from the database
 // Returns the model ID (which can be either Anthropic or OpenRouter format)
